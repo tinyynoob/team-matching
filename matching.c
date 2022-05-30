@@ -60,12 +60,29 @@ void mh_destory(struct matching *m)
     free(m);
 }
 
-/* Return true if accepted.
+/* Let the first guy in ump list apply to his next target.
+ * Return true if accepted.
  * Return false if rejected.
+ * Some guy may be added to ump list after this function.
  */
 bool apply(struct matching *m)
 {
-
+    const int pa = m->umpl->partcipant;
+    const int de = m->pacpt[pa].prefer[++m->pacpt[pa].progs];
+    int ret = dpmt_add_member(&m->dpmt[de], pa);
+    if (ret == -1) {
+        return false;
+    } else if (ret == 0) {
+        int rm = dpmt_remove_member(&m->dpmt[de]);
+        dpmt_add_member(&m->dpmt[de], pa);
+        m->umpl->partcipant = rm;
+        return true;
+    } else if (ret == 1) {
+        umplis_t *tmp = m->umpl;
+        m->umpl = m->umpl->next;
+        free(tmp);
+        return true;
+    }
 }
 
 /* Insert pacpt to dpmt->head and keep the list in descending order.
