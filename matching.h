@@ -7,7 +7,7 @@ struct partcipant {
 
 typedef struct member_list memlis_t;
 struct member_list {
-    pacpt_t member;
+    int member;
     struct member_list *next;
 };
 
@@ -26,3 +26,8 @@ struct matching {
     dpmt_t *dpmt;
 };
 
+
+struct matching *mh_init();
+bool apply(struct matching *m, int pacpt);
+bool dpmt_add_member(dpmt_t *dpmt, int pacpt);
+bool dpmt_remove_member(dpmt_t *dpmt);

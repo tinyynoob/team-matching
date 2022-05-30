@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <assert.h>
 #include "matching.h"
 
 // default: init with department.csv and partcipant.csv
@@ -32,4 +34,45 @@ struct matching *mh_init()
     }
     fclose(pf);
     return m;
+}
+
+/* @pacpt applies to his next department.
+ * Return true if accepted.
+ * Return false if rejected.
+ */
+bool apply(struct matching *m, int pacpt)
+{
+
+}
+
+/* Insert pacpt to dpmt->head and keep the list in descending order.
+ * Return false if the list is full and cannot be inserted.
+ */
+bool dpmt_add_member(dpmt_t *dpmt, int pacpt)
+{
+    if (dpmt->memnum == dpmt->slot)
+        return false;
+    memlis_t **it = &dpmt->head;
+    while (*it && dpmt->rank[pacpt] <= dpmt->rank[(*it)->member]) {
+        assert(dpmt->rank[pacpt] != dpmt->rank[(*it)->member]);
+        it = &(*it)->next;
+    }
+    memlis_t *new = (memlis_t *) malloc(sizeof(memlis_t));
+    new->member = pacpt;
+    new->next = *it;
+    *it = new;
+    return true;
+}
+
+/* Delete the front node in dpmt->list.
+ * Return false if the list is originally empty.
+ */
+bool dpmt_remove_member(dpmt_t *dpmt)
+{
+    if (!dpmt->head)
+        return false;
+    memlis_t *tmp = dpmt->head;
+    dpmt->head = dpmt->head->next;
+    free(tmp);
+    return true;
 }
