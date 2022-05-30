@@ -1,7 +1,8 @@
+#include <stdbool.h>
 
 typedef struct partcipant pacpt_t;
 struct partcipant {
-    int *prefer;    // [order] = department
+    int *prefer;  // [order] = department
     int progs;
 };
 
@@ -13,10 +14,16 @@ struct member_list {
 
 typedef struct department dpmt_t;
 struct department {
-    int *rank;  // [partcipant] = rank
-    int slot;   // slot number (memlis max capacity)
-    int memnum; // current member number (memlis size)
+    int *rank;   // [partcipant] = rank
+    int slot;    // slot number (memlis max capacity)
+    int memnum;  // current member number (memlis size)
     memlis_t *head;
+};
+
+typedef struct unemployed_list umplis_t;
+struct unemployed_list {
+    int partcipant;
+    struct unemployed_list *next;
 };
 
 struct matching {
@@ -24,6 +31,7 @@ struct matching {
     pacpt_t *pacpt;
     int dpmt_size;
     dpmt_t *dpmt;
+    umplis_t *umpl;
 };
 
 

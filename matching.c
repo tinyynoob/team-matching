@@ -1,8 +1,8 @@
+#include "matching.h"
+#include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
-#include <assert.h>
-#include "matching.h"
 
 // default: init with department.csv and partcipant.csv
 struct matching *mh_init()
@@ -25,25 +25,46 @@ struct matching *mh_init()
         m->dpmt[de].memnum = 0;
     }
     fclose(df);
+    m->umpl = NULL;
     m->pacpt = (pacpt_t *) malloc(sizeof(pacpt_t) * m->pacpt_size);
     for (int pa = 0; pa < m->pacpt_size; pa++) {
         m->pacpt[pa].prefer = (int *) malloc(sizeof(int) * m->dpmt_size);
         for (int i = 0; i < m->dpmt_size; i++)
             fscanf(pf, "%d ", &m->pacpt[pa].prefer[i]);
         m->pacpt[pa].progs = -1;
+        umplis_t *new = (umplis_t *) malloc(sizeof(umplis_t));
+        new->partcipant = pa;
+        new->next = m->umpl;
+        m->umpl = new;
     }
     fclose(pf);
     return m;
+}
+
+void mh_destory(struct matching *m)
+{
+    for (int i = 0; i < m->pacpt_size; i++)
+        free(m->pacpt[i].prefer);
+    free(m->pacpt);
+    for (int i = 0; i < m->dpmt_size; i++) {
+        while (dpmt_remove_member(&m->dpmt[i])) {
+        }
+        free(m->dpmt[i].rank);
+    }
+    free(m->dpmt);
+    while (m->umpl) {
+        umplis_t *tmp = m->umpl;
+        m->umpl = m->umpl->next;
+        free(tmp);
+    }
+    free(m);
 }
 
 /* @pacpt applies to his next department.
  * Return true if accepted.
  * Return false if rejected.
  */
-bool apply(struct matching *m, int pacpt)
-{
-
-}
+bool apply(struct matching *m, int pacpt) {}
 
 /* Insert pacpt to dpmt->head and keep the list in descending order.
  * Return false if the list is full and cannot be inserted.
