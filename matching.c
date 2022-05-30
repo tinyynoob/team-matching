@@ -60,19 +60,28 @@ void mh_destory(struct matching *m)
     free(m);
 }
 
-/* @pacpt applies to his next department.
- * Return true if accepted.
+/* Return true if accepted.
  * Return false if rejected.
  */
-bool apply(struct matching *m, int pacpt) {}
+bool apply(struct matching *m)
+{
+
+}
 
 /* Insert pacpt to dpmt->head and keep the list in descending order.
- * Return false if the list is full and cannot be inserted.
+ * Return value:
+ * -1: The list is full and pacpt cannot replace anyone.
+ *  0: The list is full but pacpt has chance to replace some member.
+ * +1: Successed
  */
-bool dpmt_add_member(dpmt_t *dpmt, int pacpt)
+int dpmt_add_member(dpmt_t *dpmt, int pacpt)
 {
-    if (dpmt->memnum == dpmt->slot)
-        return false;
+    if (dpmt->memnum == dpmt->slot) {
+        if (dpmt->memnum && dpmt->rank[pacpt] < dpmt->rank[dpmt->head->member])
+            return 0;
+        else
+            return -1;
+    }
     memlis_t **it = &dpmt->head;
     while (*it && dpmt->rank[pacpt] <= dpmt->rank[(*it)->member]) {
         assert(dpmt->rank[pacpt] != dpmt->rank[(*it)->member]);
@@ -82,18 +91,20 @@ bool dpmt_add_member(dpmt_t *dpmt, int pacpt)
     new->member = pacpt;
     new->next = *it;
     *it = new;
-    return true;
+    return 1;
 }
 
 /* Delete the front node in dpmt->list.
- * Return false if the list is originally empty.
+ * Return -1 if the list is originally empty.
+ * Otherwise, return the member being removed.
  */
-bool dpmt_remove_member(dpmt_t *dpmt)
+int dpmt_remove_member(dpmt_t *dpmt)
 {
     if (!dpmt->head)
-        return false;
+        return -1;
     memlis_t *tmp = dpmt->head;
+    int ret = tmp->member;
     dpmt->head = dpmt->head->next;
     free(tmp);
-    return true;
+    return ret;
 }

@@ -36,6 +36,7 @@ struct matching {
 
 
 struct matching *mh_init();
-bool apply(struct matching *m, int pacpt);
-bool dpmt_add_member(dpmt_t *dpmt, int pacpt);
-bool dpmt_remove_member(dpmt_t *dpmt);
+void mh_destory(struct matching *m);
+bool apply(struct matching *m);
+int dpmt_add_member(dpmt_t *dpmt, int pacpt);
+int dpmt_remove_member(dpmt_t *dpmt);
