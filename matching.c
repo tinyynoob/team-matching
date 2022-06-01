@@ -4,21 +4,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// default: init with department.csv and partcipant.csv
+#define DEBUG 1
+
+// default: init with department.tmp and partcipant.tmp
 struct matching *mh_init()
 {
     struct matching *m = (struct matching *) malloc(sizeof(struct matching));
-    FILE *df = fopen("department.csv", "r");
-    FILE *pf = fopen("partcipant.csv", "r");
+    FILE *df = fopen("department.tmp", "r");
+    FILE *pf = fopen("partcipant.tmp", "r");
     fscanf(df, "%d ", &m->dpmt_size);
     fscanf(pf, "%d ", &m->pacpt_size);
     m->dpmt = (dpmt_t *) malloc(sizeof(dpmt_t) * m->dpmt_size);
     for (int de = 0; de < m->dpmt_size; de++) {
-        fscanf(pf, "%d ", &m->dpmt[de].slot);
+        fscanf(df, "%d ", &m->dpmt[de].slot);
         m->dpmt[de].rank = (int *) malloc(sizeof(int) * m->pacpt_size);
         for (int i = 0; i < m->pacpt_size; i++) {
             int partcipant;
-            fscanf(pf, "%d ", &partcipant);
+            fscanf(df, "%d ", &partcipant);
             m->dpmt[de].rank[partcipant] = i;
         }
         m->dpmt[de].head = NULL;
@@ -47,9 +49,9 @@ void mh_destory(struct matching *m)
         free(m->pacpt[i].prefer);
     free(m->pacpt);
     for (int i = 0; i < m->dpmt_size; i++) {
-        while (dpmt_remove_member(&m->dpmt[i])) {
-        }
         free(m->dpmt[i].rank);
+        while (dpmt_remove_member(&m->dpmt[i]) != -1) {
+        }
     }
     free(m->dpmt);
     while (m->umpl) {
@@ -61,28 +63,36 @@ void mh_destory(struct matching *m)
 }
 
 /* Let the first guy in ump list apply to his next target.
- * Return true if accepted.
- * Return false if rejected.
- * Some guy may be added to ump list after this function.
+ * Return value:
+ * -1: Rejected.
+ *  0: ump list is empty and thus nobody applies.
+ * +1: Accepted.
+ * Some guy would be added to ump list after this function.
  */
-bool apply(struct matching *m)
+int apply(struct matching *m)
 {
+    if (!m->umpl)
+        return 0;
     const int pa = m->umpl->partcipant;
     const int de = m->pacpt[pa].prefer[++m->pacpt[pa].progs];
+#if DEBUG
+    printf("%d applies to %d\n", pa, de);
+#endif
     int ret = dpmt_add_member(&m->dpmt[de], pa);
     if (ret == -1) {
-        return false;
+        return -1;
     } else if (ret == 0) {
         int rm = dpmt_remove_member(&m->dpmt[de]);
         dpmt_add_member(&m->dpmt[de], pa);
         m->umpl->partcipant = rm;
-        return true;
+        return 1;
     } else if (ret == 1) {
         umplis_t *tmp = m->umpl;
         m->umpl = m->umpl->next;
         free(tmp);
-        return true;
+        return 1;
     }
+    return -1;  // impossible
 }
 
 /* Insert pacpt to dpmt->head and keep the list in descending order.
@@ -108,6 +118,7 @@ int dpmt_add_member(dpmt_t *dpmt, int pacpt)
     new->member = pacpt;
     new->next = *it;
     *it = new;
+    dpmt->memnum++;
     return 1;
 }
 
@@ -117,11 +128,12 @@ int dpmt_add_member(dpmt_t *dpmt, int pacpt)
  */
 int dpmt_remove_member(dpmt_t *dpmt)
 {
-    if (!dpmt->head)
+    if (!dpmt->memnum)
         return -1;
     memlis_t *tmp = dpmt->head;
     int ret = tmp->member;
     dpmt->head = dpmt->head->next;
     free(tmp);
+    dpmt->memnum--;
     return ret;
 }
