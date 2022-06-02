@@ -12,6 +12,7 @@ struct wentry {
 };
 
 struct whash {
+    uint32_t size;
     uint32_t capacity;
     struct wentry *table;
     uint32_t serial;  // serial number
@@ -28,6 +29,8 @@ static inline uint64_t whash_func(const wchar_t *key)
 }
 
 
-struct whash *incsv();
-bool whash_insert(struct whash *h, const wchar_t *key);
+void in_pacpt(struct whash *h_pacpt, struct whash *h_dpmt);
+uint32_t count_line(const char *pathname);
+struct whash *whash_init(uint32_t sz);
 uint32_t whash_search(struct whash *h, const wchar_t *key);
+uint32_t whash_insert(struct whash *h, const wchar_t *key);
