@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <wchar.h>
 
-#define MAXLEN 32        // maximum length of each wchar-type name
 #define MAXLINELEN 1024  // maximum length of one line in csv#include <stdint.h>
 
 struct wentry {
@@ -23,13 +22,14 @@ static inline uint64_t whash_func(const wchar_t *key)
 {
     uint64_t hash = 5381;
     int c;
-    while (c = *(unsigned char *) key++)
+    while ((c = *(unsigned char *) key++))
         hash = ((hash << 5) + hash) + c;
     return hash;
 }
 
 
-void in_pacpt(struct whash *h_pacpt, struct whash *h_dpmt);
+void read_pacpt(struct whash *h_pacpt, struct whash *h_dpmt);
+void read_dpmt(struct whash *h_dpmt, struct whash *h_pacpt);
 uint32_t count_line(const char *pathname);
 struct whash *whash_init(uint32_t sz);
 uint32_t whash_search(struct whash *h, const wchar_t *key);

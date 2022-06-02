@@ -12,7 +12,7 @@
 /* Read partcipant.csv and convert it to partcipant.tmp.
  * According to the information from csv, add data into the hash.
  */
-void in_pacpt(struct whash *h_pacpt, struct whash *h_dpmt)
+void read_pacpt(struct whash *h_pacpt, struct whash *h_dpmt)
 {
     setlocale(LC_ALL, "zh_TW.UTF-8");
     FILE *fout = fopen("partcipant.tmp", "w");
@@ -22,18 +22,16 @@ void in_pacpt(struct whash *h_pacpt, struct whash *h_dpmt)
     while (fgetws(buf, MAXLINELEN, fin)) {
         wchar_t *state;
         wchar_t *entry = wcstok(buf, L",\n", &state);
+        if (!entry)
+            continue;
         uint32_t num = whash_search(h_pacpt, entry);
-        if (num != UINT32_MAX) {  // found
-            fprintf(fout, "%u ", num);
-        } else {  // not found
+        if (num == UINT32_MAX) {  // if not found
             num = whash_insert(h_pacpt, entry);
-            if (num != UINT32_MAX)
-                fprintf(fout, "%u ", num);
-            else  // insert failed
+            if (num == UINT32_MAX)  // if insertion failed
                 exit(1);
         }
 
-        while (entry = wcstok(NULL, L",\n", &state)) {
+        while ((entry = wcstok(NULL, L",\n", &state))) {
             num = whash_search(h_dpmt, entry);
             if (num != UINT32_MAX) {
                 fprintf(fout, "%u ", num);
@@ -51,6 +49,48 @@ void in_pacpt(struct whash *h_pacpt, struct whash *h_dpmt)
     fclose(fout);
 }
 
+/* Read department.csv and convert it to department.tmp.
+ * According to the information from csv, add data into the hash.
+ */
+void read_dpmt(struct whash *h_dpmt, struct whash *h_pacpt)
+{
+    setlocale(LC_ALL, "zh_TW.UTF-8");
+    FILE *fout = fopen("department.tmp", "w");
+    fprintf(fout, "%u\n", h_dpmt->size);
+    FILE *fin = fopen("department.csv", "r");
+    wchar_t buf[MAXLINELEN];
+    while (fgetws(buf, MAXLINELEN, fin)) {
+        wchar_t *state;
+        wchar_t *entry = wcstok(buf, L",\n", &state);
+        if (!entry)
+            continue;
+        uint32_t num = whash_search(h_dpmt, entry);
+        if (num == UINT32_MAX) {  // if not found
+            num = whash_insert(h_dpmt, entry);
+            if (num == UINT32_MAX)  // if insertion failed
+                exit(1);
+        }
+
+        entry = wcstok(NULL, L",\n", &state);
+        fprintf(fout, "%u ", (uint32_t) wcstoul(entry, NULL, 10));
+
+        while ((entry = wcstok(NULL, L",\n", &state))) {
+            num = whash_search(h_pacpt, entry);
+            if (num != UINT32_MAX) {
+                fprintf(fout, "%u ", num);
+            } else {
+                num = whash_insert(h_pacpt, entry);
+                if (num != UINT32_MAX)
+                    fprintf(fout, "%u ", num);
+                else  // insert failed
+                    exit(1);
+            }
+        }
+        fputc('\n', fout);
+    }
+    fclose(fin);
+    fclose(fout);
+}
 
 /* Return the line number of a file.
  */
@@ -59,8 +99,8 @@ uint32_t count_line(const char *pathname)
     setlocale(LC_ALL, "zh_TW.UTF-8");
     FILE *f = fopen(pathname, "r");
     uint32_t ans = 0;
-    wchar_t buf[MAXLINELEN];
-    while (fgetws(buf, MAXLEN, f))
+    wchar_t buf[MAXLINELEN], *state;
+    while (fgetws(buf, MAXLINELEN, f) && wcstok(buf, L"\n", &state))
         ans++;
     fclose(f);
 #if DEBUG
@@ -83,7 +123,7 @@ struct whash *whash_init(uint32_t sz)
         h->table[i].number = UINT32_MAX;
     }
 #if DEBUG
-    printf("A whash is init with size = %u, and capacity = %u.\n", h->size,
+    printf("A whash is init with size = %u and capacity = %u.\n", h->size,
            h->capacity);
 #endif
     return h;
