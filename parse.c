@@ -10,7 +10,7 @@
 #include "log.h"
 #include "matching.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 /* Read partcipant.csv and convert it to partcipant.tmp.
  * According to the information from csv, add data into the hash.
@@ -245,6 +245,17 @@ uint32_t whash_insert(struct whash *h, const wchar_t *key)
     return h->table[value].number;
 }
 
+void whash_destory(struct whash *h)
+{
+    for (int i = 0; i < h->capacity; i++)
+        free(h->table[i].name);
+    free(h->table);
+    free(h->num2idx);
+    free(h);
+}
+
+/* Output our algorithm results.
+ */
 void result(struct matching *m, struct whash *h_dpmt, struct whash *h_pacpt)
 {
     setlocale(LC_ALL, "zh_TW.UTF-8");

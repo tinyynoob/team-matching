@@ -47,5 +47,6 @@ bool scan_wentry(struct whash *h, const char *pathname);
 struct whash *whash_init(uint32_t sz);
 struct wentry *whash_search(struct whash *h, const wchar_t *key);
 uint32_t whash_insert(struct whash *h, const wchar_t *key);
+void whash_destory(struct whash *h);
 void result(struct matching *m, struct whash *h_dpmt, struct whash *h_pacpt);
 #endif

@@ -18,5 +18,11 @@ int main()
     result(m, h_dpmt, h_pacpt);
     mh_destory(m);
     m = NULL;
+    whash_destory(h_pacpt);
+    h_pacpt = NULL;
+    whash_destory(h_dpmt);
+    h_dpmt = NULL;
+    remove("department.tmp");
+    remove("partcipant.tmp");
     return 0;
 }
