@@ -12,15 +12,15 @@
 
 #define DEBUG 0
 
-/* Read partcipant.csv and convert it to partcipant.tmp.
+/* Read participant.csv and convert it to participant.tmp.
  * According to the information from csv, add data into the hash.
  */
 bool read_pacpt(struct whash *h_pacpt, struct whash *h_dpmt)
 {
     setlocale(LC_ALL, "zh_TW.UTF-8");
-    FILE *fout = fopen("partcipant.tmp", "w");
+    FILE *fout = fopen("participant.tmp", "w");
     fprintf(fout, "%u\n", h_pacpt->size);
-    FILE *fin = fopen("partcipant.csv", "r");
+    FILE *fin = fopen("participant.csv", "r");
     wchar_t buf[MAXLINELEN];
     int32_t row = 0;  // first row has row 1
     bool *dup_check = (bool *) calloc(sizeof(bool), h_dpmt->capacity);
@@ -42,7 +42,7 @@ bool read_pacpt(struct whash *h_pacpt, struct whash *h_dpmt)
             uint32_t num = whash_search(h_dpmt, entry)->number;
             if (num == UINT32_MAX) {  // if not found
                 fwprintf(stderr,
-                         L"Error: \"%ls\" at row %d in partcipant.csv is not "
+                         L"Error: \"%ls\" at row %d in participant.csv is not "
                          L"an entry in department.csv.\n",
                          entry, row);
                 goto fail;
@@ -111,7 +111,7 @@ bool read_dpmt(struct whash *h_dpmt, struct whash *h_pacpt)
             if (num == UINT32_MAX) {  // if not found
                 fwprintf(stderr,
                          L"Error: \"%ls\" at row %d in department.csv is not "
-                         L"an entry in partcipant.csv.\n",
+                         L"an entry in participant.csv.\n",
                          entry, row);
                 goto fail;
             } else if (dup_check[num]) {  // if duplicate
@@ -259,8 +259,8 @@ void whash_destory(struct whash *h)
 void result(struct matching *m, struct whash *h_dpmt, struct whash *h_pacpt)
 {
     setlocale(LC_ALL, "zh_TW.UTF-8");
-    FILE *f = fopen("partcipant_result.csv", "w");
-    fputws(L"Partcipant,Department\n", f);
+    FILE *f = fopen("participant_result.csv", "w");
+    fputws(L"participant,Department\n", f);
     for (uint32_t pa = 0; pa < m->pacpt_size; pa++)
         fwprintf(f, L"%ls,%ls\n", nameOf(h_pacpt, pa),
                  nameOf(h_dpmt, m->pacpt[pa].prefer[m->pacpt[pa].progs]));
@@ -292,5 +292,5 @@ void result(struct matching *m, struct whash *h_dpmt, struct whash *h_pacpt)
     fclose(f);
     printf(
         "Success! The results are recorded in department_result.csv and "
-        "partcipant_result.csv.\n");
+        "participant_result.csv.\n");
 }

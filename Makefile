@@ -1,7 +1,7 @@
 cc = gcc
 source = main.c matching.c parse.c
 header = matching.h parse.h fls.h ils.h log.h
-outfile = department_result.csv partcipant_result.csv
+outfile = department_result.csv participant_result.csv
 cflags = -Wall -g
 
 .PHONY: run format clean

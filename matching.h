@@ -3,8 +3,8 @@
 
 #include <stdbool.h>
 
-typedef struct partcipant pacpt_t;
-struct partcipant {
+typedef struct participant pacpt_t;
+struct participant {
     int *prefer;  // [order] = department
     int progs;
 };
@@ -17,7 +17,7 @@ struct member_list {
 
 typedef struct department dpmt_t;
 struct department {
-    int *rank;   // [partcipant] = rank
+    int *rank;   // [participant] = rank
     int slot;    // slot number (memlis max capacity)
     int memnum;  // current member number (memlis size)
     memlis_t *head;
@@ -25,7 +25,7 @@ struct department {
 
 typedef struct unemployed_list umplis_t;
 struct unemployed_list {
-    int partcipant;
+    int participant;
     struct unemployed_list *next;
 };
 

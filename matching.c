@@ -6,12 +6,12 @@
 
 #define DEBUG 1
 
-// default: init with department.tmp and partcipant.tmp
+// default: init with department.tmp and participant.tmp
 struct matching *mh_init()
 {
     struct matching *m = (struct matching *) malloc(sizeof(struct matching));
     FILE *df = fopen("department.tmp", "r");
-    FILE *pf = fopen("partcipant.tmp", "r");
+    FILE *pf = fopen("participant.tmp", "r");
     fscanf(df, "%d ", &m->dpmt_size);
     fscanf(pf, "%d ", &m->pacpt_size);
     m->dpmt = (dpmt_t *) malloc(sizeof(dpmt_t) * m->dpmt_size);
@@ -19,9 +19,9 @@ struct matching *mh_init()
         fscanf(df, "%d ", &m->dpmt[de].slot);
         m->dpmt[de].rank = (int *) malloc(sizeof(int) * m->pacpt_size);
         for (int i = 0; i < m->pacpt_size; i++) {
-            int partcipant;
-            fscanf(df, "%d ", &partcipant);
-            m->dpmt[de].rank[partcipant] = i;
+            int participant;
+            fscanf(df, "%d ", &participant);
+            m->dpmt[de].rank[participant] = i;
         }
         m->dpmt[de].head = NULL;
         m->dpmt[de].memnum = 0;
@@ -35,7 +35,7 @@ struct matching *mh_init()
             fscanf(pf, "%d ", &m->pacpt[pa].prefer[i]);
         m->pacpt[pa].progs = -1;
         umplis_t *new = (umplis_t *) malloc(sizeof(umplis_t));
-        new->partcipant = pa;
+        new->participant = pa;
         new->next = m->umpl;
         m->umpl = new;
     }
@@ -73,7 +73,7 @@ int apply(struct matching *m)
 {
     if (!m->umpl)
         return 0;
-    const int pa = m->umpl->partcipant;
+    const int pa = m->umpl->participant;
     const int de = m->pacpt[pa].prefer[++m->pacpt[pa].progs];
 #if DEBUG
     printf("%d applies to %d\n", pa, de);
@@ -84,7 +84,7 @@ int apply(struct matching *m)
     } else if (ret == 0) {
         int rm = dpmt_remove_member(&m->dpmt[de]);
         dpmt_add_member(&m->dpmt[de], pa);
-        m->umpl->partcipant = rm;
+        m->umpl->participant = rm;
         return 1;
     } else if (ret == 1) {
         umplis_t *tmp = m->umpl;
