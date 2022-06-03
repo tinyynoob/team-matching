@@ -8,6 +8,7 @@
 #include <wchar.h>
 #include <wctype.h>  // iswdigit
 #include "log.h"
+#include "matching.h"
 
 #define DEBUG 1
 
@@ -29,7 +30,7 @@ bool read_pacpt(struct whash *h_pacpt, struct whash *h_dpmt)
         wchar_t *entry = wcstok(buf, L",\t\n", &state);
         if (!entry)
             continue;
-        if (whash_search(h_pacpt, entry) == UINT32_MAX) {  // if not found
+        if (!whash_search(h_pacpt, entry)) {  // if not found
             fwprintf(stderr,
                      L"Error: At row %d, \"%ls\" is new. Please retry.\n", row,
                      entry);
@@ -38,7 +39,7 @@ bool read_pacpt(struct whash *h_pacpt, struct whash *h_dpmt)
 
         memset(dup_check, 0, sizeof(bool) * h_dpmt->capacity);
         while ((entry = wcstok(NULL, L",\t\n", &state))) {
-            uint32_t num = whash_search(h_dpmt, entry);
+            uint32_t num = whash_search(h_dpmt, entry)->number;
             if (num == UINT32_MAX) {  // if not found
                 fwprintf(stderr,
                          L"Error: \"%ls\" at row %d in partcipant.csv is not "
@@ -86,7 +87,7 @@ bool read_dpmt(struct whash *h_dpmt, struct whash *h_pacpt)
         wchar_t *entry = wcstok(buf, L",\n", &state);
         if (!entry)
             continue;
-        if (whash_search(h_dpmt, entry) == UINT32_MAX) {  // if not found
+        if (!whash_search(h_dpmt, entry)) {  // if not found
             fwprintf(stderr,
                      L"Error: At row %d, \"%ls\" is new. Please retry.\n", row,
                      entry);
@@ -106,7 +107,7 @@ bool read_dpmt(struct whash *h_dpmt, struct whash *h_pacpt)
 
         memset(dup_check, 0, sizeof(bool) * h_pacpt->capacity);
         while ((entry = wcstok(NULL, L",\t\n", &state))) {
-            uint32_t num = whash_search(h_pacpt, entry);
+            uint32_t num = whash_search(h_pacpt, entry)->number;
             if (num == UINT32_MAX) {  // if not found
                 fwprintf(stderr,
                          L"Error: \"%ls\" at row %d in department.csv is not "
@@ -164,8 +165,10 @@ struct whash *whash_init(uint32_t sz)
     h->size = sz;
     h->capacity = 1u << (log(h->size) + 1);
     h->serial = 0;
+    h->num2idx = (uint32_t *) malloc(sizeof(uint32_t) * h->capacity);
     h->table = (struct wentry *) malloc(sizeof(struct wentry) * h->capacity);
     for (int i = 0; i < h->capacity; i++) {
+        h->num2idx[i] = UINT32_MAX;
         h->table[i].name = NULL;
         h->table[i].number = UINT32_MAX;
     }
@@ -181,6 +184,7 @@ struct whash *whash_init(uint32_t sz)
  */
 bool scan_wentry(struct whash *h, const char *pathname)
 {
+    setlocale(LC_ALL, "zh_TW.UTF-8");
     FILE *f = fopen(pathname, "r");
     wchar_t buf[MAXLINELEN];
     int32_t row = 0;  // first row has row 1
@@ -190,7 +194,7 @@ bool scan_wentry(struct whash *h, const char *pathname)
         wchar_t *entry = wcstok(buf, L",\t\n", &state);
         if (!entry)
             continue;
-        if (whash_search(h, entry) != UINT32_MAX) {
+        if (whash_search(h, entry)) {
             fwprintf(stderr, L"Error: \"%ls\" duplicate at row %d.\n", entry,
                      row);
             fclose(f);
@@ -205,10 +209,10 @@ bool scan_wentry(struct whash *h, const char *pathname)
     return true;
 }
 
-/* If found, return the number of the wentry.
- * Otherwise not found, return UINT32_MAX.
+/* If found, return the pointer to the wentry.
+ * Otherwise return NULL.
  */
-uint32_t whash_search(struct whash *h, const wchar_t *key)
+struct wentry *whash_search(struct whash *h, const wchar_t *key)
 {
 #if DEBUG
     wprintf(L"Try to search %ls\n", key);
@@ -216,10 +220,10 @@ uint32_t whash_search(struct whash *h, const wchar_t *key)
     uint32_t value = whash_func(key) & (h->capacity - 1);
     while (h->table[value].name) {
         if (!wcscmp(h->table[value].name, key))
-            return h->table[value].number;
+            return &h->table[value];
         value = (value + 1) & (h->capacity - 1);
     }
-    return UINT32_MAX;
+    return NULL;
 }
 
 /* If the table is full, return UINT32_MAX.
@@ -236,5 +240,46 @@ uint32_t whash_insert(struct whash *h, const wchar_t *key)
     while (h->table[value].name)  // finding a slot
         value = (value + 1) & (h->capacity - 1);
     h->table[value].name = wcsdup(key);
-    return h->table[value].number = h->serial++;
+    h->table[value].number = h->serial++;
+    h->num2idx[h->table[value].number] = value;
+    return h->table[value].number;
+}
+
+void result(struct matching *m, struct whash *h_dpmt, struct whash *h_pacpt)
+{
+    setlocale(LC_ALL, "zh_TW.UTF-8");
+    FILE *f = fopen("partcipant_result.csv", "w");
+    fputws(L"Partcipant,Department\n", f);
+    for (uint32_t pa = 0; pa < m->pacpt_size; pa++)
+        fwprintf(f, L"%ls,%ls\n", nameOf(h_pacpt, pa),
+                 nameOf(h_dpmt, m->pacpt[pa].prefer[m->pacpt[pa].progs]));
+    fclose(f);
+    f = fopen("department_result.csv", "w");
+    fputws(L"Department,", f);
+    uint32_t max_memnum = 0;
+    for (int i = 0; i < m->dpmt_size; i++)
+        if (m->dpmt[i].memnum > max_memnum)
+            max_memnum = m->dpmt[i].memnum;
+    for (int i = 0; i < max_memnum; i++)
+        fwprintf(f, L"Position %u,", i + 1);
+    fputws(L"\n", f);
+    for (uint32_t de = 0; de < m->dpmt_size; de++) {
+        fwprintf(f, L"%ls,", nameOf(h_dpmt, de));
+        wchar_t *pos[m->dpmt[de].memnum];
+        /* Print the reversed list to show the result in ascending order (higher
+         * priority at front) */
+        memlis_t *it = m->dpmt[de].head;
+        for (int j = m->dpmt[de].memnum - 1; j >= 0;
+             j--) {  // notice the type to prevent infinite loop
+            pos[j] = nameOf(h_pacpt, it->member);
+            it = it->next;
+        }
+        for (int i = 0; i < m->dpmt[de].memnum; i++)
+            fwprintf(f, L"%ls,", pos[i]);
+        fputws(L"\n", f);
+    }
+    fclose(f);
+    printf(
+        "Success! The results are recorded in department_result.csv and "
+        "partcipant_result.csv.\n");
 }

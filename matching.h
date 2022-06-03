@@ -1,3 +1,6 @@
+#ifndef __MATCHING_H
+#define __MATCHING_H
+
 #include <stdbool.h>
 
 typedef struct partcipant pacpt_t;
@@ -8,7 +11,7 @@ struct partcipant {
 
 typedef struct member_list memlis_t;
 struct member_list {
-    int member;
+    int member;  // member id
     struct member_list *next;
 };
 
@@ -40,3 +43,4 @@ void mh_destory(struct matching *m);
 int apply(struct matching *m);
 int dpmt_add_member(dpmt_t *dpmt, int pacpt);
 int dpmt_remove_member(dpmt_t *dpmt);
+#endif
