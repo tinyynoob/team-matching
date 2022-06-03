@@ -4,7 +4,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>  // memset
 #include <wchar.h>
+#include <wctype.h>  // iswdigit
 #include "log.h"
 
 #define DEBUG 1
@@ -12,84 +14,126 @@
 /* Read partcipant.csv and convert it to partcipant.tmp.
  * According to the information from csv, add data into the hash.
  */
-void read_pacpt(struct whash *h_pacpt, struct whash *h_dpmt)
+bool read_pacpt(struct whash *h_pacpt, struct whash *h_dpmt)
 {
     setlocale(LC_ALL, "zh_TW.UTF-8");
     FILE *fout = fopen("partcipant.tmp", "w");
     fprintf(fout, "%u\n", h_pacpt->size);
     FILE *fin = fopen("partcipant.csv", "r");
     wchar_t buf[MAXLINELEN];
+    int32_t row = 0;  // first row has row 1
+    bool *dup_check = (bool *) calloc(sizeof(bool), h_dpmt->capacity);
     while (fgetws(buf, MAXLINELEN, fin)) {
+        row++;
         wchar_t *state;
-        wchar_t *entry = wcstok(buf, L",\n", &state);
+        wchar_t *entry = wcstok(buf, L",\t\n", &state);
         if (!entry)
             continue;
-        uint32_t num = whash_search(h_pacpt, entry);
-        if (num == UINT32_MAX) {  // if not found
-            num = whash_insert(h_pacpt, entry);
-            if (num == UINT32_MAX)  // if insertion failed
-                exit(1);
+        if (whash_search(h_pacpt, entry) == UINT32_MAX) {  // if not found
+            fwprintf(stderr,
+                     L"Error: At row %d, \"%ls\" is new. Please retry.\n", row,
+                     entry);
+            goto fail;
         }
 
-        while ((entry = wcstok(NULL, L",\n", &state))) {
-            num = whash_search(h_dpmt, entry);
-            if (num != UINT32_MAX) {
-                fprintf(fout, "%u ", num);
+        memset(dup_check, 0, sizeof(bool) * h_dpmt->capacity);
+        while ((entry = wcstok(NULL, L",\t\n", &state))) {
+            uint32_t num = whash_search(h_dpmt, entry);
+            if (num == UINT32_MAX) {  // if not found
+                fwprintf(stderr,
+                         L"Error: \"%ls\" at row %d in partcipant.csv is not "
+                         L"an entry in department.csv.\n",
+                         entry, row);
+                goto fail;
+            } else if (dup_check[num]) {  // if duplicate
+                fwprintf(stderr,
+                         L"Error: There is duplicate \"%ls\" at row %d.\n",
+                         entry, row);
+                goto fail;
             } else {
-                num = whash_insert(h_dpmt, entry);
-                if (num != UINT32_MAX)
-                    fprintf(fout, "%u ", num);
-                else  // insert failed
-                    exit(1);
+                dup_check[num] = true;
+                fprintf(fout, "%u ", num);
             }
         }
         fputc('\n', fout);
     }
     fclose(fin);
     fclose(fout);
+    free(dup_check);
+    return true;
+fail:;
+    fclose(fin);
+    fclose(fout);
+    free(dup_check);
+    return false;
 }
 
 /* Read department.csv and convert it to department.tmp.
  * According to the information from csv, add data into the hash.
  */
-void read_dpmt(struct whash *h_dpmt, struct whash *h_pacpt)
+bool read_dpmt(struct whash *h_dpmt, struct whash *h_pacpt)
 {
     setlocale(LC_ALL, "zh_TW.UTF-8");
     FILE *fout = fopen("department.tmp", "w");
     fprintf(fout, "%u\n", h_dpmt->size);
     FILE *fin = fopen("department.csv", "r");
     wchar_t buf[MAXLINELEN];
+    int32_t row = 0;  // first row has row 1
+    bool *dup_check = (bool *) calloc(sizeof(bool), h_pacpt->capacity);
     while (fgetws(buf, MAXLINELEN, fin)) {
+        row++;
         wchar_t *state;
         wchar_t *entry = wcstok(buf, L",\n", &state);
         if (!entry)
             continue;
-        uint32_t num = whash_search(h_dpmt, entry);
-        if (num == UINT32_MAX) {  // if not found
-            num = whash_insert(h_dpmt, entry);
-            if (num == UINT32_MAX)  // if insertion failed
-                exit(1);
+        if (whash_search(h_dpmt, entry) == UINT32_MAX) {  // if not found
+            fwprintf(stderr,
+                     L"Error: At row %d, \"%ls\" is new. Please retry.\n", row,
+                     entry);
+            goto fail;
         }
 
-        entry = wcstok(NULL, L",\n", &state);
+        entry = wcstok(NULL, L",\t\n", &state);
+        for (int i = 0; i < wcslen(entry); i++) {
+            if (!iswdigit(entry[i])) {
+                fwprintf(stderr,
+                         L"Error: \"%ls\" at row %d is not a valid number.\n",
+                         entry, row);
+                goto fail;
+            }
+        }
         fprintf(fout, "%u ", (uint32_t) wcstoul(entry, NULL, 10));
 
-        while ((entry = wcstok(NULL, L",\n", &state))) {
-            num = whash_search(h_pacpt, entry);
-            if (num != UINT32_MAX) {
-                fprintf(fout, "%u ", num);
+        memset(dup_check, 0, sizeof(bool) * h_pacpt->capacity);
+        while ((entry = wcstok(NULL, L",\t\n", &state))) {
+            uint32_t num = whash_search(h_pacpt, entry);
+            if (num == UINT32_MAX) {  // if not found
+                fwprintf(stderr,
+                         L"Error: \"%ls\" at row %d in department.csv is not "
+                         L"an entry in partcipant.csv.\n",
+                         entry, row);
+                goto fail;
+            } else if (dup_check[num]) {  // if duplicate
+                fwprintf(stderr,
+                         L"Error: There is duplicate \"%ls\" at row %d.\n",
+                         entry, row);
+                goto fail;
             } else {
-                num = whash_insert(h_pacpt, entry);
-                if (num != UINT32_MAX)
-                    fprintf(fout, "%u ", num);
-                else  // insert failed
-                    exit(1);
+                dup_check[num] = true;
+                fprintf(fout, "%u ", num);
             }
         }
         fputc('\n', fout);
     }
     fclose(fin);
     fclose(fout);
+    free(dup_check);
+    return true;
+fail:;
+    fclose(fin);
+    fclose(fout);
+    free(dup_check);
+    return false;
 }
 
 /* Return the line number of a file.
@@ -106,6 +150,9 @@ uint32_t count_line(const char *pathname)
 #if DEBUG
     printf("%s has line %u.\n", pathname, ans);
 #endif
+    if (ans > MAXLINENUM)
+        fprintf(stderr, "File %s has too many lines. May cause error.\n",
+                pathname);
     return ans;
 }
 
@@ -127,6 +174,35 @@ struct whash *whash_init(uint32_t sz)
            h->capacity);
 #endif
     return h;
+}
+
+/*
+ * Scan the csv file and insert the entries to their whash struct.
+ */
+bool scan_wentry(struct whash *h, const char *pathname)
+{
+    FILE *f = fopen(pathname, "r");
+    wchar_t buf[MAXLINELEN];
+    int32_t row = 0;  // first row has row 1
+    while (fgetws(buf, MAXLINELEN, f)) {
+        row++;
+        wchar_t *state;
+        wchar_t *entry = wcstok(buf, L",\t\n", &state);
+        if (!entry)
+            continue;
+        if (whash_search(h, entry) != UINT32_MAX) {
+            fwprintf(stderr, L"Error: \"%ls\" duplicate at row %d.\n", entry,
+                     row);
+            fclose(f);
+            return false;
+        } else if (whash_insert(h, entry) == UINT32_MAX) {
+            fprintf(stderr, "The file size seems to be changed.\n");
+            fclose(f);
+            return false;
+        }
+    }
+    fclose(f);
+    return true;
 }
 
 /* If found, return the number of the wentry.
