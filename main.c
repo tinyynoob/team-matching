@@ -13,8 +13,8 @@ int main()
     if (!read_pacpt(h_pacpt, h_dpmt) || !read_dpmt(h_dpmt, h_pacpt))
         exit(1);
     struct matching *m = mh_init();
-    while (apply(m)) {
-    };
+    while (mh_apply(m)) {
+    }
     result(m, h_dpmt, h_pacpt);
     mh_destory(m);
     m = NULL;

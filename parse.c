@@ -260,10 +260,10 @@ void result(struct matching *m, struct whash *h_dpmt, struct whash *h_pacpt)
 {
     setlocale(LC_ALL, "zh_TW.UTF-8");
     FILE *f = fopen("participant_result.csv", "w");
-    fputws(L"participant,Department\n", f);
+    fputws(L"Participant,Department\n", f);
     for (uint32_t pa = 0; pa < m->pacpt_size; pa++)
         fwprintf(f, L"%ls,%ls\n", nameOf(h_pacpt, pa),
-                 nameOf(h_dpmt, m->pacpt[pa].prefer[m->pacpt[pa].progs]));
+                 nameOf(h_dpmt, mh_getTeam(m, pa)));
     fclose(f);
     f = fopen("department_result.csv", "w");
     fputws(L"Department,", f);
@@ -273,7 +273,7 @@ void result(struct matching *m, struct whash *h_dpmt, struct whash *h_pacpt)
             max_memnum = m->dpmt[i].memnum;
     for (int i = 0; i < max_memnum; i++)
         fwprintf(f, L"Position %u,", i + 1);
-    fputws(L"\n", f);
+    fputwc(L'\n', f);
     for (uint32_t de = 0; de < m->dpmt_size; de++) {
         fwprintf(f, L"%ls,", nameOf(h_dpmt, de));
         wchar_t *pos[m->dpmt[de].memnum];
@@ -287,7 +287,7 @@ void result(struct matching *m, struct whash *h_dpmt, struct whash *h_pacpt)
         }
         for (int i = 0; i < m->dpmt[de].memnum; i++)
             fwprintf(f, L"%ls,", pos[i]);
-        fputws(L"\n", f);
+        fputwc(L'\n', f);
     }
     fclose(f);
     printf(

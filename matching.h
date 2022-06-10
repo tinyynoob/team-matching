@@ -40,7 +40,8 @@ struct matching {
 
 struct matching *mh_init();
 void mh_destory(struct matching *m);
-int apply(struct matching *m);
+int mh_getTeam(struct matching *m, int pa);
+int mh_apply(struct matching *m);
 int dpmt_add_member(dpmt_t *dpmt, int pacpt);
 int dpmt_remove_member(dpmt_t *dpmt);
 #endif

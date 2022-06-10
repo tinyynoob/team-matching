@@ -43,6 +43,13 @@ struct matching *mh_init()
     return m;
 }
 
+/* Return the department that @pa is currently in.
+ */
+int mh_getTeam(struct matching *m, int pa)
+{
+    return m->pacpt[pa].prefer[m->pacpt[pa].progs];
+}
+
 void mh_destory(struct matching *m)
 {
     for (int i = 0; i < m->pacpt_size; i++)
@@ -69,12 +76,13 @@ void mh_destory(struct matching *m)
  * +1: Accepted.
  * Some guy would be added to ump list after this function.
  */
-int apply(struct matching *m)
+int mh_apply(struct matching *m)
 {
     if (!m->umpl)
         return 0;
     const int pa = m->umpl->participant;
-    const int de = m->pacpt[pa].prefer[++m->pacpt[pa].progs];
+    ++m->pacpt[pa].progs;  // @pa's next target
+    const int de = mh_getTeam(m, pa);
 #if DEBUG
     printf("%d applies to %d\n", pa, de);
 #endif
@@ -85,12 +93,12 @@ int apply(struct matching *m)
         int rm = dpmt_remove_member(&m->dpmt[de]);
         dpmt_add_member(&m->dpmt[de], pa);
         m->umpl->participant = rm;
-        return 1;
+        return +1;
     } else if (ret == 1) {
         umplis_t *tmp = m->umpl;
         m->umpl = m->umpl->next;
         free(tmp);
-        return 1;
+        return +1;
     }
     return -1;  // impossible
 }
