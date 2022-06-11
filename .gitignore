@@ -7,6 +7,7 @@
 !Makefile
 !*.c
 !*.h
+!*.md
 
 !example_Windows/team_matching.exe
 !example_Windows/participant.csv
