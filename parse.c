@@ -12,6 +12,12 @@
 
 #define DEBUG 0
 
+#define WINDOWS \
+    0  // should be set to 1 if intend to compile to a Windows executable
+#if WINDOWS
+#define wcstok(a, b, c) wcstok(a, b)
+#endif
+
 /* Read participant.csv and convert it to participant.tmp.
  * According to the information from csv, add data into the hash.
  */
