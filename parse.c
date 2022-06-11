@@ -22,7 +22,7 @@ bool read_pacpt(struct whash *h_pacpt, struct whash *h_dpmt)
     fprintf(fout, "%u\n", h_pacpt->size);
     FILE *fin = fopen("participant.csv", "r");
     wchar_t buf[MAXLINELEN];
-    int32_t row = 0;  // first row has row 1
+    int32_t row = 0;  // first row is row 1
     bool *dup_check = (bool *) calloc(sizeof(bool), h_dpmt->capacity);
     while (fgetws(buf, MAXLINELEN, fin)) {
         row++;
@@ -37,16 +37,20 @@ bool read_pacpt(struct whash *h_pacpt, struct whash *h_dpmt)
             goto fail;
         }
 
+        int32_t count = 0;
         memset(dup_check, 0, sizeof(bool) * h_dpmt->capacity);
         while ((entry = wcstok(NULL, L",\t\n", &state))) {
-            uint32_t num = whash_search(h_dpmt, entry)->number;
-            if (num == UINT32_MAX) {  // if not found
+            count++;
+            struct wentry *tmp = whash_search(h_dpmt, entry);
+            if (!tmp) {  // if not found
                 fwprintf(stderr,
                          L"Error: \"%ls\" at row %d in participant.csv is not "
                          L"an entry in department.csv.\n",
                          entry, row);
                 goto fail;
-            } else if (dup_check[num]) {  // if duplicate
+            }
+            uint32_t num = tmp->number;
+            if (dup_check[num]) {  // if duplicate
                 fwprintf(stderr,
                          L"Error: There is duplicate \"%ls\" at row %d.\n",
                          entry, row);
@@ -57,6 +61,13 @@ bool read_pacpt(struct whash *h_pacpt, struct whash *h_dpmt)
             }
         }
         fputc('\n', fout);
+        if (count != h_dpmt->size) {
+            fwprintf(stderr,
+                     L"Error: The preference list at row %d in department.csv "
+                     L"is not complete.\n",
+                     row);
+            exit(1);
+        }
     }
     fclose(fin);
     fclose(fout);
@@ -79,7 +90,7 @@ bool read_dpmt(struct whash *h_dpmt, struct whash *h_pacpt)
     fprintf(fout, "%u\n", h_dpmt->size);
     FILE *fin = fopen("department.csv", "r");
     wchar_t buf[MAXLINELEN];
-    int32_t row = 0;  // first row has row 1
+    int32_t row = 0;  // first row is row 1
     bool *dup_check = (bool *) calloc(sizeof(bool), h_pacpt->capacity);
     while (fgetws(buf, MAXLINELEN, fin)) {
         row++;
@@ -105,16 +116,20 @@ bool read_dpmt(struct whash *h_dpmt, struct whash *h_pacpt)
         }
         fprintf(fout, "%u ", (uint32_t) wcstoul(entry, NULL, 10));
 
+        int32_t count = 0;
         memset(dup_check, 0, sizeof(bool) * h_pacpt->capacity);
         while ((entry = wcstok(NULL, L",\t\n", &state))) {
-            uint32_t num = whash_search(h_pacpt, entry)->number;
-            if (num == UINT32_MAX) {  // if not found
+            count++;
+            struct wentry *tmp = whash_search(h_pacpt, entry);
+            if (!tmp) {  // if not found
                 fwprintf(stderr,
                          L"Error: \"%ls\" at row %d in department.csv is not "
                          L"an entry in participant.csv.\n",
                          entry, row);
                 goto fail;
-            } else if (dup_check[num]) {  // if duplicate
+            }
+            uint32_t num = tmp->number;
+            if (dup_check[num]) {  // if duplicate
                 fwprintf(stderr,
                          L"Error: There is duplicate \"%ls\" at row %d.\n",
                          entry, row);
@@ -125,6 +140,13 @@ bool read_dpmt(struct whash *h_dpmt, struct whash *h_pacpt)
             }
         }
         fputc('\n', fout);
+        if (count != h_pacpt->size) {
+            fwprintf(stderr,
+                     L"Error: The preference list at row %d in participant.csv "
+                     L"is not complete.\n",
+                     row);
+            exit(1);
+        }
     }
     fclose(fin);
     fclose(fout);
@@ -142,7 +164,11 @@ fail:;
 uint32_t count_line(const char *pathname)
 {
     setlocale(LC_ALL, "zh_TW.UTF-8");
-    FILE *f = fopen(pathname, "r");
+    FILE *f;
+    if (!(f = fopen(pathname, "r"))) {
+        fprintf(stderr, "Error: Could not open file %s.\n", pathname);
+        exit(1);
+    }
     uint32_t ans = 0;
     wchar_t buf[MAXLINELEN], *state;
     while (fgetws(buf, MAXLINELEN, f) && wcstok(buf, L"\n", &state))
@@ -152,7 +178,8 @@ uint32_t count_line(const char *pathname)
     printf("%s has line %u.\n", pathname, ans);
 #endif
     if (ans > MAXLINENUM)
-        fprintf(stderr, "File %s has too many lines. May cause error.\n",
+        fprintf(stderr,
+                "Warning: File %s has too many lines. May cause error.\n",
                 pathname);
     return ans;
 }
@@ -161,6 +188,10 @@ uint32_t count_line(const char *pathname)
  */
 struct whash *whash_init(uint32_t sz)
 {
+    if (!sz) {
+        fputs("Error: Empty input file\n", stderr);
+        exit(1);
+    }
     struct whash *h = (struct whash *) malloc(sizeof(struct whash));
     h->size = sz;
     h->capacity = 1u << (log(h->size) + 1);
