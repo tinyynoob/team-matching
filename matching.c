@@ -1,6 +1,4 @@
 #include "matching.h"
-#include <assert.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -44,10 +42,16 @@ struct matching *mh_init()
 }
 
 /* Return the department that @pa is currently in.
+ * -1 would be returned if @pa is teamless.
  */
 int mh_getTeam(struct matching *m, int pa)
 {
-    return m->pacpt[pa].prefer[m->pacpt[pa].progs];
+    if (m->pacpt[pa].progs == -1)
+        return -1;
+    else if (m->pacpt[pa].progs >= m->dpmt_size)
+        return -1;
+    else
+        return m->pacpt[pa].prefer[m->pacpt[pa].progs];
 }
 
 void mh_destory(struct matching *m)
@@ -71,10 +75,12 @@ void mh_destory(struct matching *m)
 
 /* Let the first guy in ump list apply to his next target.
  * Return value:
+ * -2: This guy has no next target and becomes teamless forever.
  * -1: Rejected.
  *  0: ump list is empty and thus nobody applies.
  * +1: Accepted.
- * Some guy would be added to ump list after this function.
+ * Some guy may be added to ump list after this function.
+ * If the return value is -2, the guy would be removed from ump list.
  */
 int mh_apply(struct matching *m)
 {
@@ -82,25 +88,34 @@ int mh_apply(struct matching *m)
         return 0;
     const int pa = m->umpl->participant;
     ++m->pacpt[pa].progs;  // @pa's next target
+    // If the guy has applied to all departments, remove it from ump list
+    // since he has no further chance to be employed.
+    if (m->pacpt[pa].progs >= m->dpmt_size) {
+        umplis_t *tmp = m->umpl;
+        m->umpl = m->umpl->next;
+        free(tmp);
+        return -2;
+    }
     const int de = mh_getTeam(m, pa);
 #if DEBUG
     printf("%d applies to %d\n", pa, de);
 #endif
-    int ret = dpmt_add_member(&m->dpmt[de], pa);
-    if (ret == -1) {
+    switch (dpmt_add_member(&m->dpmt[de], pa)) {
+    case -1:;
         return -1;
-    } else if (ret == 0) {
+    case 0:;
         int rm = dpmt_remove_member(&m->dpmt[de]);
         dpmt_add_member(&m->dpmt[de], pa);
         m->umpl->participant = rm;
         return +1;
-    } else if (ret == 1) {
+    case +1:;
         umplis_t *tmp = m->umpl;
         m->umpl = m->umpl->next;
         free(tmp);
         return +1;
+    default:;
+        return -1;
     }
-    return -1;  // impossible
 }
 
 /* Insert pacpt to dpmt->head and keep the list in descending order.
@@ -118,16 +133,14 @@ int dpmt_add_member(dpmt_t *dpmt, int pacpt)
             return -1;
     }
     memlis_t **it = &dpmt->head;
-    while (*it && dpmt->rank[pacpt] <= dpmt->rank[(*it)->member]) {
-        assert(dpmt->rank[pacpt] != dpmt->rank[(*it)->member]);
+    while (*it && dpmt->rank[pacpt] <= dpmt->rank[(*it)->member])
         it = &(*it)->next;
-    }
     memlis_t *new = (memlis_t *) malloc(sizeof(memlis_t));
     new->member = pacpt;
     new->next = *it;
     *it = new;
     dpmt->memnum++;
-    return 1;
+    return +1;
 }
 
 /* Delete the front node in dpmt->list.

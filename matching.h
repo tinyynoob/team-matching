@@ -1,8 +1,6 @@
 #ifndef __MATCHING_H
 #define __MATCHING_H
 
-#include <stdbool.h>
-
 typedef struct participant pacpt_t;
 struct participant {
     int *prefer;  // [order] = department
@@ -25,7 +23,7 @@ struct department {
 
 typedef struct unemployed_list umplis_t;
 struct unemployed_list {
-    int participant;
+    int participant;  // participant id
     struct unemployed_list *next;
 };
 

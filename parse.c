@@ -261,9 +261,14 @@ void result(struct matching *m, struct whash *h_dpmt, struct whash *h_pacpt)
     setlocale(LC_ALL, "zh_TW.UTF-8");
     FILE *f = fopen("participant_result.csv", "w");
     fputws(L"Participant,Department\n", f);
-    for (uint32_t pa = 0; pa < m->pacpt_size; pa++)
-        fwprintf(f, L"%ls,%ls\n", nameOf(h_pacpt, pa),
-                 nameOf(h_dpmt, mh_getTeam(m, pa)));
+    for (uint32_t pa = 0; pa < m->pacpt_size; pa++) {
+        fwprintf(f, L"%ls,", nameOf(h_pacpt, pa));
+        if (mh_getTeam(m, pa) == -1)  // if this guy is teamless
+            fputwc(L'~', f);
+        else
+            fwprintf(f, L"%ls", nameOf(h_dpmt, mh_getTeam(m, pa)));
+        fputwc(L'\n', f);
+    }
     fclose(f);
     f = fopen("department_result.csv", "w");
     fputws(L"Department,", f);
