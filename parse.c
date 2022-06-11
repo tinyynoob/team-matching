@@ -297,27 +297,27 @@ void result(struct matching *m, struct whash *h_dpmt, struct whash *h_pacpt)
 {
     setlocale(LC_ALL, "zh_TW.UTF-8");
     FILE *f = fopen("participant_result.csv", "w");
-    fputws(L"Participant,Department\n", f);
+    fputws(L"Participant,Department", f);
     for (uint32_t pa = 0; pa < m->pacpt_size; pa++) {
+        fputwc(L'\n', f);
         fwprintf(f, L"%ls,", nameOf(h_pacpt, pa));
         if (mh_getTeam(m, pa) == -1)  // if this guy is teamless
             fputwc(L'~', f);
         else
             fwprintf(f, L"%ls", nameOf(h_dpmt, mh_getTeam(m, pa)));
-        fputwc(L'\n', f);
     }
     fclose(f);
     f = fopen("department_result.csv", "w");
-    fputws(L"Department,", f);
+    fputws(L"Department", f);
     uint32_t max_memnum = 0;
     for (int i = 0; i < m->dpmt_size; i++)
         if (m->dpmt[i].memnum > max_memnum)
             max_memnum = m->dpmt[i].memnum;
     for (int i = 0; i < max_memnum; i++)
-        fwprintf(f, L"Position %u,", i + 1);
-    fputwc(L'\n', f);
+        fwprintf(f, L",Position %u", i + 1);
     for (uint32_t de = 0; de < m->dpmt_size; de++) {
-        fwprintf(f, L"%ls,", nameOf(h_dpmt, de));
+        fputwc(L'\n', f);
+        fwprintf(f, L"%ls", nameOf(h_dpmt, de));
         wchar_t *pos[m->dpmt[de].memnum];
         /* Print the reversed list to show the result in ascending order (higher
          * priority at front) */
@@ -328,8 +328,7 @@ void result(struct matching *m, struct whash *h_dpmt, struct whash *h_pacpt)
             it = it->next;
         }
         for (int i = 0; i < m->dpmt[de].memnum; i++)
-            fwprintf(f, L"%ls,", pos[i]);
-        fputwc(L'\n', f);
+            fwprintf(f, L",%ls", pos[i]);
     }
     fclose(f);
     printf(
